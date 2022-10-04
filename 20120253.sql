@@ -176,8 +176,6 @@ AS
     END
 GO
 
-USE QLSV
-GO
 --6.6
 CREATE PROCEDURE SP_MHSINHVIEN
     @MSSV VARCHAR(10)
@@ -216,86 +214,27 @@ AS
 GO
 
 --6.8.2
-ALTER PROCEDURE SP_MONHOC682
+CREATE PROCEDURE SP_MONHOC682
     @MSSV VARCHAR(10)
 AS
-    SELECT kq.maSinhVien, kq.maMonHoc, kq.diem 
-    FROM MonHoc mh 
-    LEFT JOIN KetQua kq on kq.maMonHoc = mh.ma
-    WHERE (kq.maSinhVien = @MSSV and kq.lanThi >= ALL(
-        SELECT kq2.lanThi 
-        FROM KetQua kq2 
-        WHERE kq2.maSinhVien = @MSSV and kq.maMonHoc = kq2.maMonHoc
-    )) or kq.lanThi = 0
-GO
-
-EXEC SP_MONHOC682 '0212001'
-
-SELECT *
-    FROM MonHoc mh 
-    LEFT JOIN KetQua kq on mh.ma = kq.maMonHoc
-SELECT DISTINCT sv.ma, mh.ma, kq.lanThi, kq.diem 
-FROM SinhVien sv 
-RIGHT JOIN Lop l on l.ma = sv.maLop
-RIGHT JOIN MonHoc mh on mh.maKhoa = l.maKhoa
-LEFT JOIN KetQua kq on kq.maSinhVien = sv.ma
-
-SELECT sv.ma, l.maKhoa
-FROM SinhVien sv join Lop l on l.ma = sv.maLop
-
-
-SELECT * 
-FROM KetQua kq 
-RIGHT JOIN MonHoc mh on kq.maMonHoc = mh.ma
-LEFT JOIN SinhVien sv on kq.maSinhVien = sv.ma
-
-SELECT sv.ma, mh.ma, (SELECT kq.lanThi 
-                      FROM KetQua kq 
-                      WHERE kq.maSinhVien = sv.ma and kq.lanThi >= ALL(
-                        SELECT kq2.lanThi 
-                        FROM KetQua kq2 
-                        WHERE kq2.maSinhVien = sv.ma and kq2.maMonHoc = kq.maMonHoc))
-
-
--- SELECT CASE
---     WHEN kq.maSinhVien IS NULL THEN sv.ma
---     ELSE kq.maSinhVien
--- END AS maSinhVien,
-SELECT DISTINCT sv.ma
-,mh.ma,
-CASE
-    WHEN kq.lanThi >= 1 and mh.ma in
-    (SELECT kq3.maMonHoc FROM KetQua kq3 WHERE kq3.maSinhVien = sv.ma 
-        and kq3.lanThi = kq.lanThi 
-        and kq3.diem = kq3.diem )
-    THEN kq.lanThi
-    ELSE NULL
-END AS lanThi1
-,CASE
-    WHEN kq.diem >= 0 and mh.ma in
-    (SELECT kq3.maMonHoc FROM KetQua kq3 WHERE kq3.maSinhVien = sv.ma
-    and kq3.lanThi = kq.lanThi 
-    and kq.diem = kq3.diem )
-    THEN kq.diem
-    ELSE NULL
-END AS diemThi
-FROM (SinhVien sv 
+    SELECT sv.ma, mh.ma, dbo.F_DTSINHVIEN(@MSSV, mh.ma) AS N'Điểm thi'
+    FROM (SinhVien sv 
     join lop l on sv.maLop = l.ma
     join MonHoc mh on mh.maKhoa = l.maKhoa)
-    LEFT JOIN KetQua kq on sv.ma = kq.maSinhVien
-WHERE kq.lanThi >= ALL(SELECT kq2.lanThi 
-                        FROM KetQua kq2 
-                        WHERE
-                        kq2.maMonHoc = kq.maMonHoc
-                        and kq2.maSinhVien = kq.maSinhVien
-                        ) and lanThi1 is not NULL
-                        -- or (kq.lanThi IS NULL and mh.ma not in (
-                        --     SELECT kq4.maMonHoc 
-                        --     FROM KetQua kq4
-                        --     WHERE kq4.maSinhVien = kq.maSinhVien
-                        --     )) 
-                        
+    WHERE sv.ma = @MSSV
+GO
 
-SELECT sv.ma, mh.ma FROM SinhVien sv 
-join lop l on l.ma = sv.maLop
-join MonHoc mh on mh.maKhoa = l.maKhoa
+--6.8.3
+CREATE PROCEDURE SP_MONHOC683
+    @MSSV VARCHAR(10)
+AS
+    SELECT sv.ma, mh.ma, 
+    CASE 
+        WHEN CONVERT(varchar(MAX), dbo.F_DTSINHVIEN(@MSSV, mh.ma)) IS NULL THEN N'<chưa có điểm>'
+        ELSE CONVERT(varchar(MAX), dbo.F_DTSINHVIEN(@MSSV, mh.ma))
+    END AS N'Điểm thi'
+    FROM (SinhVien sv 
+    join lop l on sv.maLop = l.ma
+    join MonHoc mh on mh.maKhoa = l.maKhoa)
+    WHERE sv.ma = @MSSV
+GO
