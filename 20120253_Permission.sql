@@ -1,7 +1,57 @@
-EXEC sp_addlogin 'GV01', 'GV01', 'GiaoVien'
-EXEC sp_addlogin 'GV02', 'GV02', 'GiaoVien'
-EXEC sp_addlogin 'GV03', 'GV03', 'GiaoVien'
+--1.Tạo login cho GV01, GV02, GV03, SV01, SV02, SV03
+CREATE LOGIN SV01
+WITH PASSWORD = 'SV01',
+DEFAULT_DATABASE = QLSV
 
-EXEC sp_addlogin 'SV01', 'SV01', 'SinhVien'
-EXEC sp_addlogin 'SV02', 'SV02', 'SinhVien'
-EXEC sp_addlogin 'SV03', 'SV03', 'SinhVien'
+CREATE LOGIN SV02
+WITH PASSWORD = 'SV02',
+DEFAULT_DATABASE = QLSV
+
+CREATE LOGIN SV03
+WITH PASSWORD = 'SV03',
+DEFAULT_DATABASE = QLSV
+
+CREATE LOGIN GV01
+WITH PASSWORD = 'GV01',
+DEFAULT_DATABASE = QLSV
+
+CREATE LOGIN GV02
+WITH PASSWORD = 'GV02',
+DEFAULT_DATABASE = QLSV
+
+CREATE LOGIN GV03
+WITH PASSWORD = 'GV03',
+DEFAULT_DATABASE = QLSV
+
+--2.Cấp quyền xem, cập nhật thông tin cho sinh viên
+CREATE USER U_SV01 FOR LOGIN SV01
+CREATE USER U_SV02 FOR LOGIN SV02
+CREATE USER U_SV03 FOR LOGIN SV03
+
+CREATE VIEW THONGTINSINHVIEN AS
+SELECT  * 
+FROM SinhVien sv 
+
+GRANT SELECT, UPDATE ON THONGTINSINHVIEN TO U_SV01, U_SV02, U_SV03
+
+--3.Tạo 2 nhóm vai trò GiaoVien, QuanLi
+CREATE ROLE GiaoVien
+CREATE ROLE QuanLi
+
+--4. GV01 là quản lí, GV02 và GV03 là giáo viên
+CREATE USER U_GV01 FOR LOGIN GV01
+CREATE USER U_GV02 FOR LOGIN GV02
+CREATE USER U_GV03 FOR LOGIN GV03
+
+GRANT GiaoVien To U_GV02, U_GV03
+GRANT QuanLi to U_GV01
+
+--5 Giáo viên được xem tất cả thông tin môn học
+GRANT SELECT ON MonHoc TO GiaoVien
+
+--6 Giáo viên được thêm kết quả và cập nhật điểm môn học 
+GRANT INSERT, UPDATE ON KetQua TO GiaoVien
+
+--7 Quản lí được xem, cập nhật, thêm thông tin môn học, sinh viên và được phép cấp quyền cho các user khác
+GRANT SELECT, UPDATE, INSERT ON MonHoc TO QuanLi WITH GRANT OPTION
+GRANT SELECT, UPDATE, INSERT ON SinhVien TO QuanLi WITH GRANT OPTION
