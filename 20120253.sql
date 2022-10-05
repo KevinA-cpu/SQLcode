@@ -238,3 +238,83 @@ AS
     join MonHoc mh on mh.maKhoa = l.maKhoa)
     WHERE sv.ma = @MSSV
 GO
+
+--Thêm quan hệ xếp loại
+CREATE TABLE XepLoai(
+    maSinhVien VARCHAR(7) PRIMARY KEY,
+    diemTrungBinh FLOAT,
+    ketQua NVARCHAR(10),
+    hocLuc NVARCHAR(10)
+)
+
+--6.9
+CREATE PROCEDURE SP_INSERTXEPLOAT
+AS
+
+    INSERT INTO XepLoai(maSinhVien, diemTrungBinh, ketQua)
+    SELECT sv.ma, dbo.F_DTBSINHVIEN(sv.ma), 
+    CASE
+        WHEN (dbo.F_DTBSINHVIEN(sv.ma) >= 5 AND (SELECT COUNT(*)  FROM KetQua kq WHERE kq.lanThi >= ALL(
+                        SELECT kq2.lanThi 
+                        FROM KetQua kq2
+                        WHERE kq2.maSinhVien = kq.maSinhVien
+                        AND kq2.maMonHoc = kq.maMonHoc)
+                        AND kq.diem < 4 
+                        AND kq.maSinhVien = sv.ma) <= 2)
+        THEN N'Đạt'
+        WHEN dbo.F_DTBSINHVIEN(sv.ma) IS NULL THEN NULL
+        ELSE N'Không đạt'
+    END
+    FROM SinhVien sv
+
+    UPDATE XepLoai 
+    SET hocLuc = N'Giỏi'
+    WHERE KetQua = N'Đạt' AND diemTrungBinh >=8
+
+    UPDATE XepLoai 
+    SET hocLuc = N'Khá'
+    WHERE KetQua = N'Đạt' AND diemTrungBinh >= 7 AND diemTrungBinh < 8
+
+    UPDATE XepLoai 
+    SET hocLuc = N'Trung bình'
+    WHERE KetQua = N'Đạt' AND diemTrungBinh < 7
+GO
+
+--6.10
+CREATE PROCEDURE SP_SVTHAMGIADU
+AS
+    SELECT dbo.F_DTBSINHVIEN(sv.ma) AS N'Sinh viên tham gia đầy đủ các môn học của khoa'
+    FROM SinhVien sv 
+        JOIN Lop l on l.ma =sv.maLop 
+        JOIN MonHoc mh on mh.maKhoa = l.maKhoa
+    WHERE NOT EXISTS(SELECT mh2.ma FROM MonHoc mh2 WHERE mh2.maKhoa = l.maKhoa
+                        EXCEPT(SELECT kq.maMonHoc FROM KetQua kq WHERE kq.maSinhVien = sv.ma))
+GO
+
+--7.1
+CREATE RULE listCT
+AS
+@list IN ('CQ','CD','TC')
+
+EXEC sp_bindrule listCT, 'ChuongTrinh.ma'
+
+--7.2
+ALTER TABLE GiangKhoa
+ADD CONSTRAINT CHK_HocKy CHECK (hocKy in (1,2))
+
+--7.3
+ALTER TABLE GiangKhoa
+ADD CONSTRAINT CHK_soTietLyThuyet CHECK (soTietLyThuyet <= 120)
+
+--7.4
+ALTER TABLE GiangKhoa
+ADD CONSTRAINT CHK_soTietThucHanh CHECK (soTietThucHanh <= 120)
+
+--7.5
+CREATE RULE sotinchi
+AS
+@range >= 0 and @range <= 6
+
+EXEC sp_bindrule sotinchi, 'GiangKhoa.soTinChi'
+
+--7.6 Trigger?
