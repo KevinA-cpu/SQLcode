@@ -317,4 +317,135 @@ AS
 
 EXEC sp_bindrule sotinchi, 'GiangKhoa.soTinChi'
 
---7.6 Trigger?
+--7.6
+CREATE TRIGGER T_OPTION1DIEMTHI
+ON ketQua
+AFTER INSERT, UPDATE
+AS
+    --release the trigger for a command that doesn't change any rows
+    IF (ROWCOUNT_BIG() = 0)
+        RETURN;
+    --supress 'rows affected' messages
+    SET NOCOUNT ON
+
+    --check insert table
+    --check whether diem is between 0 and 10
+    IF(EXISTS(SELECT i.diem FROM inserted i
+                WHERE i.diem < 0 OR i.diem > 10))
+    BEGIN
+        RAISERROR(N'Điểm phải theo thang điểm 10', 16, 10)
+        ROLLBACK TRANSACTION
+        RETURN
+    END
+
+    --check for invalid decimal points
+    IF(EXISTS(SELECT i.diem FROM inserted i
+        WHERE ROUND(CAST(i.diem AS DECIMAL(18,1))*2, 0)/2 - i.diem < 0 OR
+        ROUND(CAST(i.diem AS DECIMAL(18,1))*2, 0)/2 - i.diem > 0)
+        )
+    BEGIN
+        RAISERROR(N'Điểm phải chính xác tới 0.5', 16, 10)
+        ROLLBACK TRANSACTION
+        RETURN
+    END
+GO
+
+DROP TRIGGER T_OPTION1DIEMTHI
+
+CREATE TRIGGER T_OPTION2DIEMTHI
+ON ketQua
+AFTER INSERT, UPDATE
+AS
+    --release the trigger for a command that doesn't change any rows
+    IF (ROWCOUNT_BIG() = 0)
+        RETURN;
+    --supress 'rows affected' messages
+    SET NOCOUNT ON
+
+    --check insert table
+    --check whether diem is between 0 and 10
+    IF(EXISTS(SELECT i.diem FROM inserted i
+                WHERE i.diem < 0 OR i.diem > 10))
+    BEGIN
+        RAISERROR(N'Điểm phải theo thang điểm 10', 16, 10)
+        ROLLBACK TRANSACTION
+        RETURN
+    END
+
+    --check for invalid decimal points
+    IF(EXISTS(SELECT i.diem FROM inserted i
+        WHERE ROUND(CAST(i.diem AS DECIMAL(18,1))*2, 0)/2 - i.diem < 0 OR
+        ROUND(CAST(i.diem AS DECIMAL(18,1))*2, 0)/2 - i.diem > 0)
+        )
+    BEGIN
+        PRINT N'Làm tròn điểm';
+        UPDATE KetQua
+        SET diem = ROUND(CAST(diem AS DECIMAL(18,1))*2, 0)/2
+        WHERE maSinhVien in 
+        (SELECT i.maSinhVien FROM inserted i
+        WHERE ROUND(CAST(i.diem AS DECIMAL(18,1))*2, 0)/2 - i.diem < 0 OR
+        ROUND(CAST(i.diem AS DECIMAL(18,1))*2, 0)/2 - i.diem > 0)
+        RETURN
+    END
+GO
+
+DROP TRIGGER T_OPTION2DIEMTHI
+
+--7.7
+ALTER TABLE KhoaHoc
+ADD CONSTRAINT CHK_namKetThuc_namBatDau CHECK (namKetThuc >= namBatDau)
+
+--7.8
+ALTER TABLE GiangKhoa
+ADD CONSTRAINT CHK_soTietLyThuyet_soTietThucHanh CHECK (soTietLyThuyet >= soTietThucHanh)
+
+--7.9
+ALTER TABLE ChuongTrinh
+ADD CONSTRAINT UNI_tenChuongTrinh UNIQUE(tenChuongTrinh)
+
+--7.10
+ALTER TABLE khoa
+ADD CONSTRAINT UNI_tenKhoa UNIQUE(tenKhoa)
+
+--7.11
+ALTER TABLE MonHoc
+ADD CONSTRAINT UNI_tenMonHoc UNIQUE(tenMonHoc)
+
+--7.12
+ALTER TABLE KetQua
+ADD CONSTRAINT CHK_lanThi CHECK(lanThi <= 2)
+
+--7.14
+CREATE TRIGGER T_LOPNAMKHOAHOC
+ON Lop
+AFTER INSERT, UPDATE
+AS
+    IF(EXISTS(SELECT * 
+        FROM inserted i 
+        JOIN KhoaHoc kh on kh.ma = i.maKhoaHoc
+        JOIN Khoa k on k.ma = i.maKhoa
+            WHERE kh.namBatDau < k.namThanhLap))
+    BEGIN
+        RAISERROR(N'Năm bắt đầu khóa học của một lớp không thể nhỏ hơn năm thành lặp khoa quản lý lớp đó.',16,10)
+        ROLLBACK TRANSACTION
+        RETURN
+    END
+GO
+
+--7.15
+CREATE TRIGGER T_SINHVIENMHHOPLE
+ON ketQua
+AFTER UPDATE, INSERT
+AS
+    IF(EXISTS(
+        SELECT * 
+        FROM inserted i
+            JOIN GiangKhoa gk on gk.maMonHoc = i.maMonHoc
+            JOIN SinhVien sv on sv.ma = i.maSinhVien
+            JOIN Lop l on l.ma = sv.maLop
+        WHERE gk.maChuongTrinh != l.maChuongTrinh OR gk.maKhoa != l.maKhoa
+    ))
+    BEGIN
+        RAISERROR(N'Sinh viên chỉ có thể dự thi các môn học có trong chương trình và thuộc về khoa mà sinh viên đó đang theo học.', 16,10)
+    END
+GO
