@@ -420,6 +420,12 @@ CREATE TRIGGER T_LOPNAMKHOAHOC
 ON Lop
 AFTER INSERT, UPDATE
 AS
+    --release the trigger for a command that doesn't change any rows
+    IF (ROWCOUNT_BIG() = 0)
+        RETURN;
+    --supress 'rows affected' messages
+    SET NOCOUNT ON
+
     IF(EXISTS(SELECT * 
         FROM inserted i 
         JOIN KhoaHoc kh on kh.ma = i.maKhoaHoc
@@ -437,6 +443,12 @@ CREATE TRIGGER T_SINHVIENMHHOPLE
 ON ketQua
 AFTER UPDATE, INSERT
 AS
+    --release the trigger for a command that doesn't change any rows
+    IF (ROWCOUNT_BIG() = 0)
+        RETURN;
+    --supress 'rows affected' messages
+    SET NOCOUNT ON
+
     IF(EXISTS(
         SELECT * 
         FROM inserted i
@@ -447,5 +459,33 @@ AS
     ))
     BEGIN
         RAISERROR(N'Sinh viên chỉ có thể dự thi các môn học có trong chương trình và thuộc về khoa mà sinh viên đó đang theo học.', 16,10)
+        ROLLBACK TRANSACTION
+        RETURN
+    END
+GO
+
+--7.16
+ALTER TABLE Lop
+ADD SISO INT
+
+CREATE TRIGGER T_SISOLOP
+ON Lop
+AFTER INSERT, UPDATE
+AS
+    --release the trigger for a command that doesn't change any rows
+    IF (ROWCOUNT_BIG() = 0)
+        RETURN;
+    --supress 'rows affected' messages
+    SET NOCOUNT ON
+
+    IF(EXISTS(SELECT * FROM inserted i 
+    WHERE i.SISO != (SELECT COUNT(*) 
+                    FROM SinhVien sv 
+                    WHERE sv.maLop = i.ma)
+                ))
+    BEGIN
+        RAISERROR(N'Sĩ số của một lớp phải bằng số sinh viên theo học lớp đó.', 16, 10)
+        ROLLBACK TRANSACTION
+        RETURN
     END
 GO
