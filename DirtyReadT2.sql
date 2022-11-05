@@ -1,0 +1,68 @@
+USE GiaoDoAnABC
+GO 
+
+--Trường hợp 1:
+--T2
+SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
+SELECT * 
+FROM ChiTietHopDong 
+WHERE MaSoThue = 'Test'
+
+--Trường hợp 2, 3, 4:
+--T2
+SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
+SELECT * 
+FROM DonDatHang 
+WHERE TenQuan = 'Lau De A' AND DiaChiKinhDoanh = 'XYZ'
+
+--Trường hợp 5:
+--T2
+SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
+SELECT * 
+FROM Feedback
+WHERE TenQuan = 'Lau De A' AND DiaChiKinhDoanh = 'XYZ'
+
+--Trường hợp 6, 11:
+--T2
+SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
+SELECT * 
+FROM DoiTac
+WHERE TenNguoiDaiDien = 'Nguyen Van A'
+
+--Trường hợp 7:
+--T2
+SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
+SELECT * 
+FROM ThucDon 
+WHERE TenQuan = 'Lau De A' AND DiaChiKinhDoanh = 'XYZ'
+
+--Trường hợp 8, 9:
+--T2
+SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
+SELECT * 
+FROM DonDatHang
+WHERE MaDH = 'Test'
+
+--Trường hợp 10:
+--T2
+SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
+SELECT * 
+FROM DonDatHang
+WHERE DiaChiGiaoHang = 'KTX Khu B DHQG TPHCM' AND TrangThaiDonHang = N'Chấp nhận đơn hàng' AND MaTX IS NULL
+
+--Trường hợp 12:
+--T2
+SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
+SELECT * 
+FROM ChiTietHopDong cthd, HopDong hd
+WHERE cthd.MaSoThue = '0001' AND hd.MaSoThue = '0001'
+
+--Trường hợp 13
+--T2
+SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
+SELECT * 
+FROM DoiTac dt 
+WHERE EXISTS (
+    SELECT * 
+    FROM ChiTietHopDong cthd 
+    WHERE cthd.TenQuan = dt.TenQuan AND cthd.DiaChiKinhDoanh = dt.DiaChiKinhDoanh)
